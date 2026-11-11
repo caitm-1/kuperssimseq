@@ -1,0 +1,129 @@
+clear;
+clc;
+
+%implementing psychtoolbox
+%------------------------------------------------------------------------%
+%sca;
+%PsychDefaultSetup(2);
+%KbName('UnifyKeyNames');
+%try 
+
+%% Select the Millikey Device
+
+%milliKeyIndex = 11;
+
+%% Button presses
+
+%leftKey = KbName('1!');
+%rightKey = KbName('2@');
+
+
+
+%Set up
+%-----------------------------------------------------------------------%
+
+
+% Get and load the Image file 
+
+imageFolder = '/home/pproom/full/';       %file location/filepath
+fName = 'face*.png';
+d = dir(fullfile(imageFolder, fName));
+
+numberOfFaces = length(d);
+
+fprintf('Number of faces loaded: %d\n', numberOfFaces);
+
+if numberOfFaces < 2
+    error('At least two face images are required.');
+end
+
+
+% step 0 screen dimensions in deg
+
+            screenWidthCm = 58.7;                       % physical screen dimensions in cm
+            screenHeightCm = 33;
+
+viewingDistanceCm = 88.9;                       %Dr.Kupers gave 60.23 estimate this is measures w tape measure from eye distance from the vpixx
+
+screenWidthPx = 2560;
+screenHeightPx = 1440;                          %screen resolution in Px
+
+
+screenWidthDeg = rad2deg(atan((screenWidthCm/2)/viewingDistanceCm))*2;                             % convert screen dimension to degrees of visual angle
+
+screenHeightDeg = rad2deg(atan((screenHeightCm/2)/viewingDistanceCm))*2;
+
+                              %calculate px per deg
+pixelsPerDegX = round(screenWidthPx/screenWidthDeg);         %round px (bc half pixels cannot display/dont exist)
+pixelsPerDegY = round(screenHeightPx/screenHeightDeg);
+
+
+fprintf('Screen width (deg): %.2f\n', screenWidthDeg);                       % display results
+fprintf('Screen height (deg): %.2f\n', screenHeightDeg);
+fprintf('Horizontal pixels per degree: %.2f\n', pixelsPerDegX);
+fprintf('Vertical pixels per degree: %.2f\n', pixelsPerDegY);
+
+
+% step 1 create face crop stimuli 
+
+            
+faceWidthDeg = 4;                    %face size in  degrees of visual angle
+faceHeightDeg = 4;
+
+            faceWidthPx = round(faceWidthDeg * pixelsPerDegX);                          %convert from deg to px          
+            faceHeightPx = round(faceHeightDeg * pixelsPerDegY);
+
+
+resizedFaces = cell(numberOfFaces, 1);                                      %stores resized faces & the fragments into cell
+faceFragments = cell(numberOfFaces, 4);
+
+
+                                    
+                          for i = 1:numberOfFaces                                                        % using for loop to go through each image and store it in a cell to resize to 272x272
+
+                              faceImage = imread(fullfile(d(i).folder, d(i).name));       %read face images
+
+                              resizedFace = imresize(faceImage, [faceHeightPx, faceWidthPx]);         %resize the faces
+
+                              pixelsToShave = (faceWidthPx - faceHeightPx) / 2;                        %calculates px to shave off(4 from each side)
+
+                              resizedFace = resizedFace(:, pixelsToShave+1:end-pixelsToShave, :);      %shaves equally from left and right sides
+
+                              resizedFaces{i} = resizedFace;                %stores squared faces
+
+
+                              halfSize = size(resizedFace, 1) / 2;          %divides into four equal fragments
+
+                 
+
+                     faceFragments{i,1} = resizedFace(1:halfSize, 1:halfSize, :);                                %top left
+                     faceFragments{i,2} = resizedFace(1:halfSize, halfSize+1:end, :);                            %top right
+                     faceFragments{i,3} = resizedFace(halfSize+1:end, 1:halfSize, :);                            %bottom left
+                     faceFragments{i,4} = resizedFace(halfSize+1:end, halfSize+1:end, :);                        %bottom right
+
+                          end
+
+% step 2 spatial layout
+
+
+screenCenterX = screenWidthPx / 2;                                          %finds the centre of the screen in pixels
+screenCenterY = screenHeightPx / 2;
+
+
+eccentricityDeg = 4;                                                        
+eccentricityPx = round(eccentricityDeg * pixelsPerDegX);                    %converts 4 deg eccentricity into px
+
+                         %calculate center position of each face
+leftFaceX = screenCenterX - eccentricityPx;                                  %left face: 4 deg to left of screen centre                      
+
+rightFaceX = screenCenterX + eccentricityPx;                                 %right face: 4 deg to right of screen center
+ 
+faceY =screenCenterY;                                                        %both faces vertically centered on screen
+
+
+
+% step 3 create the sequence
+
+
+                                                                                
+                                                                                % initialize the vpixx
